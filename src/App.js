@@ -3,6 +3,7 @@ import Panel from "./Panel";
 import getWeb3 from "./getWeb3";
 import AirlineContract from "./airline";
 import { AirlineService } from "./airlineService";
+import { ToastContainer } from "react-toastr";
 
 const converter = (web3) => {
     return (value) => {
@@ -32,7 +33,22 @@ export class App extends Component {
 
         var account = (await this.web3.eth.getAccounts())[0];
 
-        this.web3.currentProvider.publicConfigStore.on('update', async function(event){
+        let flightPurchased = this.airline.FlightPurchased();
+        flightPurchased.watch(function (err, result) {
+
+            const { customer, price, flight } = result.args;
+
+            if (customer === this.state.account) {
+                console.log(`You purchased a flight to ${flight} with a cost of ${price}`);
+            } else {
+                this.container.success(`Last customer purchased a flight to ${flight}
+                with a cost of ${price}`, 'Flight information');
+            }
+
+        }.bind(this));
+
+
+        this.web3.currentProvider.publicConfigStore.on('update', async function (event) {
             this.setState({
                 account: event.selectedAddress.toLowerCase()
             }, () => {
@@ -112,7 +128,7 @@ export class App extends Component {
                     <Panel title="Loyalty points - refundable ether">
                         <span>{this.state.refundableEther} eth</span>
                         <button className="btn btn-sm bg-success text-white"
-                        onClick={this.refundLoyaltyPoints.bind(this)}>Refund</button>
+                            onClick={this.refundLoyaltyPoints.bind(this)}>Refund</button>
                     </Panel>
                 </div>
             </div>
@@ -130,14 +146,16 @@ export class App extends Component {
                 </div>
                 <div className="col-sm">
                     <Panel title="Your flights">
-                    {this.state.customerFlights.map((flight, i) => {
-                        return <div key={i}>
-                            {flight.name} - cost: {flight.price}
-                        </div>
-                    })}
+                        {this.state.customerFlights.map((flight, i) => {
+                            return <div key={i}>
+                                {flight.name} - cost: {flight.price}
+                            </div>
+                        })}
                     </Panel>
                 </div>
             </div>
+            <ToastContainer ref={(input) => this.container = input}
+                className="toast-top-right" />
         </React.Fragment>
     }
 }
